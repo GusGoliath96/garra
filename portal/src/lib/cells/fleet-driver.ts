@@ -44,7 +44,7 @@ export class FleetDriver implements CellDriver {
   }
 
   async create(tenant: string): Promise<CreatedCell> {
-    const heap = process.env.CELL_NODE_HEAP_MB ?? "320";
+    const heap = process.env.CELL_NODE_HEAP_MB ?? "1024";
     const stdout = await this.fleet([
       "create",
       tenant,
