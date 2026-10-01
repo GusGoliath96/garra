@@ -19,7 +19,9 @@ const heap = process.env.CELL_NODE_HEAP_MB ?? "1024";
 
 // Sem --purge-data: o estado da cell (config, memória, credenciais) fica no disco.
 execFileSync(bin, ["fleet", "rm", tenant, "--force"], { env, stdio: "inherit" });
-execFileSync(
+// O erro do execFileSync inclui o comando (com o token): não deixar vazar no log.
+try {
+  execFileSync(
   bin,
   [
     "fleet", "create", tenant, "--json",
@@ -31,6 +33,11 @@ execFileSync(
     "--env", `NODE_OPTIONS=--max-old-space-size=${heap}`,
   ],
   { env, stdio: ["ignore", "ignore", "inherit"] },
-);
+  );
+} catch {
+  // `fleet create` falha se o health check estourar o prazo (ex.: lease antigo ainda ativo),
+  // mas o container fica criado e sobe sozinho. Confira com `openclaw fleet status`.
+  console.error(`fleet create retornou erro para ${tenant}; verifique com: openclaw fleet status ${tenant}`);
+}
 console.log(`cell ${tenant} recriada (porta ${agent.port}, heap ${heap} MB)`);
 await pool.end();
