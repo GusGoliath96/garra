@@ -45,7 +45,7 @@ Atualizado em 2026-09-30.
 - Proxmox: criar **VM** (não LXC — Docker em LXC dá dor de cabeça) Ubuntu 24.04,
   ~12 GB RAM, 4 vCPU, 80+ GB disco. Deixa ~4 GB pro host.
 - Telegram em long polling ⇒ cells **sempre ligadas** (sem scale-to-zero).
-- Limite por cell 768 MB (heap 320 MB) ⇒ **~12–14 usuários** na VM de 12 GB (medido na Fase 0).
+- Teto por cell 1280 MB (heap 320 MB; uso real ~620 MB) ⇒ **~12–14 usuários** na VM de 12 GB (medido na Fase 0).
 
 ## Fases
 
@@ -65,11 +65,14 @@ Atualizado em 2026-09-30.
 **Achados importantes**
 - **Memória é maior do que a literatura diz**: ociosa ~600–700 MB sem limite de heap.
   Com `NODE_OPTIONS=--max-old-space-size=256` cai para ~520 MB (sem OOM). Padrão adotado:
-  limite 768 MB + heap 320 MB. **VM de 12 GB ≈ 12–14 usuários**, não 20.
+  teto 1280 MB + heap 320 MB; uso real ~620 MB. **VM de 12 GB ≈ 12–14 usuários**, não 20.
 - WebSocket RPC de fora do container exige pareamento de device; o caminho simples é
   `docker exec` do CLI (loopback = confiável) + `admin-http-rpc` para config.
 - Métodos WS úteis para o futuro: `models.authLogin` (wizard de login remoto), `wizard.*`,
   `channels.pairing.approve` — exigem cliente WS com `operator.admin` (device pareado).
+- **Na VM (4 vCPU), 768 MB travou o provisionamento**: comandos via `docker exec` dividem o
+  cgroup com o gateway (~580 MB + ~200 MB do CLI) e a cell entra em thrashing. Limite subiu
+  para 1280 MB (é teto, não reserva: uso real ociosa ~620 MB).
 - `setup --baseline` cria o workspace sem onboarding; o portal remove o `BOOTSTRAP.md`.
 - Primeiro remetente aprovado no Telegram vira dono (`commands.ownerAllowFrom`).
 - Telegram suporta `webhookUrl` → caminho futuro para scale-to-zero.
