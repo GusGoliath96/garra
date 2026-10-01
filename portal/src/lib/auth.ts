@@ -5,6 +5,8 @@ import { pool } from "./db";
 export const auth = betterAuth({
   appName: "Garra",
   database: pool,
+  // Domínio público (ex.: túnel da Cloudflare) — vem do BETTER_AUTH_URL.
+  trustedOrigins: process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : undefined,
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
