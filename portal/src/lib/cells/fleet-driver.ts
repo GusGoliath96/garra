@@ -127,8 +127,23 @@ export class FleetDriver implements CellDriver {
   }
 
   async openclawInteractive(tenant: string, args: string[]): Promise<InteractiveExec> {
+    return this.interactive(tenant, [...OPENCLAW_ENTRY, ...args]);
+  }
+
+  async claudeInteractive(tenant: string, args: string[]): Promise<InteractiveExec> {
+    // Claude Code vem na imagem via Agent SDK; o caminho muda com a versão.
+    return this.interactive(tenant, [
+      "sh",
+      "-c",
+      'exec "$(ls /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-linux-*/node_modules/@anthropic-ai/claude-agent-sdk-linux-*/claude | head -1)" "$@"',
+      "claude",
+      ...args,
+    ]);
+  }
+
+  private async interactive(tenant: string, cmd: string[]): Promise<InteractiveExec> {
     const exec = await this.container(tenant).exec({
-      Cmd: [...OPENCLAW_ENTRY, ...args],
+      Cmd: cmd,
       AttachStdout: true,
       AttachStderr: true,
       AttachStdin: true,
@@ -137,6 +152,8 @@ export class FleetDriver implements CellDriver {
       Env: ["COLUMNS=200", "LINES=50", "TERM=xterm-256color"],
     });
     const stream = await exec.start({ hijack: true, stdin: true, Tty: true });
+    // Terminal largo para URLs longas não quebrarem em várias linhas.
+    await exec.resize({ h: 50, w: 1000 }).catch(() => null);
     let buf = "";
     stream.on("data", (c: Buffer) => {
       buf += c.toString("utf8");

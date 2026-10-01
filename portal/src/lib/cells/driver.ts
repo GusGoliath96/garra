@@ -35,6 +35,8 @@ export interface CellDriver {
   openclaw(tenant: string, args: string[], opts?: ExecOptions): Promise<ExecResult>;
   /** Igual ao anterior, mas com TTY — para fluxos que exigem terminal (ex.: device-code). */
   openclawInteractive(tenant: string, args: string[]): Promise<InteractiveExec>;
+  /** Claude Code (embutido na imagem) com TTY — login da assinatura Claude. */
+  claudeInteractive(tenant: string, args: string[]): Promise<InteractiveExec>;
   /** Comando arbitrário dentro da cell (como usuário node). */
   exec(tenant: string, cmd: string[], opts?: ExecOptions): Promise<ExecResult>;
   /** Escreve um arquivo dentro da cell (como usuário node). */

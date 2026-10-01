@@ -207,7 +207,10 @@ export async function setLlmCredential(a: AgentRow, provider: ProviderId, mode: 
 export type OAuthSession = {
   agentId: string;
   provider: ProviderId;
-  status: "starting" | "waiting_user" | "done" | "error";
+  kind: "device_code" | "claude_code";
+  // waiting_user: usuário digita o código na página do provedor (device-code)
+  // waiting_code: usuário cola aqui o código que o provedor mostrou (Claude)
+  status: "starting" | "waiting_user" | "waiting_code" | "finishing" | "done" | "error";
   url?: string;
   code?: string;
   error?: string;
@@ -218,12 +221,10 @@ export type OAuthSession = {
 /** Login por assinatura via device-code (OpenAI/ChatGPT): devolve URL + código para o usuário. */
 export async function startDeviceLogin(a: AgentRow, provider: ProviderId): Promise<OAuthSession> {
   const prev = oauthSessions.get(a.id);
-  if (prev && (prev.status === "starting" || prev.status === "waiting_user") && Date.now() - prev.startedAt < 14 * 60_000) {
-    return prev;
-  }
+  if (prev?.kind === "device_code" && isPending(prev)) return prev;
   prev?.proc?.kill();
 
-  const session: OAuthSession = { agentId: a.id, provider, status: "starting", startedAt: Date.now() };
+  const session: OAuthSession = { agentId: a.id, provider, kind: "device_code", status: "starting", startedAt: Date.now() };
   oauthSessions.set(a.id, session);
   const proc = await driver.openclawInteractive(a.tenant, [
     "models", "auth", "login", "--provider", provider, "--device-code", "--force",
@@ -244,15 +245,7 @@ export async function startDeviceLogin(a: AgentRow, provider: ProviderId): Promi
     clearInterval(poll);
     if (res.exitCode === 0) {
       try {
-        const fresh = (await queryOne<AgentRow>(`SELECT * FROM agent WHERE id = $1`, [a.id]))!;
-        const model = await applyModel(fresh, provider);
-        await update(a.id, {
-          llm_provider: provider,
-          llm_mode: "subscription",
-          llm_model: model,
-          setup_step: fresh.setup_step === "llm" ? "persona" : fresh.setup_step,
-        });
-        await logEvent(a.id, "llm_configured", { provider, mode: "subscription" });
+        await markSubscriptionDone(a.id, provider);
         session.status = "done";
       } catch (e) {
         Object.assign(session, { status: "error", error: errorMessage(e) });
@@ -269,13 +262,108 @@ export async function startDeviceLogin(a: AgentRow, provider: ProviderId): Promi
   return session;
 }
 
+function isPending(s: OAuthSession) {
+  return ["starting", "waiting_user", "waiting_code", "finishing"].includes(s.status) && Date.now() - s.startedAt < 14 * 60_000;
+}
+
+async function markSubscriptionDone(agentId: string, provider: ProviderId) {
+  const fresh = (await queryOne<AgentRow>(`SELECT * FROM agent WHERE id = $1`, [agentId]))!;
+  const model = await applyModel(fresh, provider);
+  await update(agentId, {
+    llm_provider: provider,
+    llm_mode: "subscription",
+    llm_model: model,
+    setup_step: fresh.setup_step === "llm" ? "persona" : fresh.setup_step,
+  });
+  await logEvent(agentId, "llm_configured", { provider, mode: "subscription" });
+}
+
+/**
+ * Login da assinatura Claude: roda `claude setup-token` (Claude Code embutido na imagem) dentro
+ * da cell. Ele gera o link de autorização do claude.ai; o usuário autoriza e cola aqui o código
+ * que a Anthropic mostra. O token resultante vai direto para a cell — o usuário nunca o vê.
+ */
+export async function startClaudeLogin(a: AgentRow): Promise<OAuthSession> {
+  const prev = oauthSessions.get(a.id);
+  if (prev?.kind === "claude_code" && isPending(prev) && prev.status !== "finishing") return prev;
+  prev?.proc?.kill();
+
+  const session: OAuthSession = { agentId: a.id, provider: "anthropic", kind: "claude_code", status: "starting", startedAt: Date.now() };
+  oauthSessions.set(a.id, session);
+  const proc = await driver.claudeInteractive(a.tenant, ["setup-token"]);
+  session.proc = proc;
+
+  const poll = setInterval(() => {
+    if (session.status !== "starting") return;
+    // Junta quebras de linha caso o terminal tenha quebrado a URL.
+    const flat = proc.output().replace(/\n(?=[A-Za-z0-9%&=_.~-])/g, "");
+    const url = flat.match(/https:\/\/claude\.(?:ai|com)\/[^\s]*oauth\/authorize\?[^\s]+/)?.[0];
+    if (url) Object.assign(session, { url, status: "waiting_code" });
+  }, 300);
+
+  proc.done.then((res) => {
+    clearInterval(poll);
+    if (session.status === "starting" || session.status === "waiting_code") {
+      const tail = res.output.trim().split("\n").slice(-3).join(" ");
+      Object.assign(session, { status: "error", error: tail || "O login do Claude foi encerrado." });
+    }
+  });
+
+  const until = Date.now() + 25_000;
+  while (session.status === "starting" && Date.now() < until) await new Promise((r) => setTimeout(r, 300));
+  if (session.status === "starting") {
+    proc.kill();
+    Object.assign(session, { status: "error", error: "O Claude não gerou o link de login a tempo." });
+  }
+  return session;
+}
+
+/** Recebe o código mostrado pela Anthropic, entrega ao Claude Code e guarda o token na cell. */
+export async function submitClaudeCode(a: AgentRow, code: string): Promise<OAuthSession> {
+  const session = oauthSessions.get(a.id);
+  if (!session || session.kind !== "claude_code" || session.status !== "waiting_code" || !session.proc) {
+    throw new Error("Nenhum login do Claude em andamento. Clique em “Entrar com o Claude” de novo.");
+  }
+  const proc = session.proc;
+  session.status = "finishing";
+  const before = proc.output().length;
+  proc.write(code.trim() + "\r");
+
+  const until = Date.now() + 45_000;
+  let token: string | undefined;
+  while (Date.now() < until) {
+    const out = proc.output().slice(before).replace(/\s+/g, "");
+    token = out.match(/sk-ant-oat01-[A-Za-z0-9_-]{20,}/)?.[0];
+    if (token) break;
+    if (/invalid|error|failed|expired/i.test(proc.output().slice(before))) break;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  proc.kill();
+  if (!token) {
+    const msg = proc.output().slice(before).trim().split("\n").slice(-2).join(" ");
+    Object.assign(session, { status: "error", error: `O Claude não aceitou o código. ${msg}`.trim() });
+    return session;
+  }
+  try {
+    const r = await driver.openclaw(a.tenant, ["models", "auth", "paste-token", "--provider", "anthropic"], {
+      stdin: token + "\n",
+    });
+    if (r.exitCode !== 0) throw new Error(r.output.slice(-300));
+    await markSubscriptionDone(a.id, "anthropic");
+    session.status = "done";
+  } catch (e) {
+    Object.assign(session, { status: "error", error: errorMessage(e) });
+  }
+  return session;
+}
+
 export function getOAuthSession(agentId: string) {
   return oauthSessions.get(agentId) ?? null;
 }
 
 export function publicOAuth(s: OAuthSession | null) {
   if (!s) return null;
-  return { provider: s.provider, status: s.status, url: s.url, code: s.code, error: s.error };
+  return { provider: s.provider, kind: s.kind, status: s.status, url: s.url, code: s.code, error: s.error };
 }
 
 // ---------------------------------------------------------------- persona

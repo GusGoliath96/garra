@@ -44,7 +44,12 @@ const OPTIONS: {
   },
 ];
 
-type OAuth = { status: "starting" | "waiting_user" | "done" | "error"; url?: string; code?: string; error?: string } | null;
+type OAuth = {
+  status: "starting" | "waiting_user" | "waiting_code" | "finishing" | "done" | "error";
+  url?: string;
+  code?: string;
+  error?: string;
+} | null;
 
 export function LlmStep({ onDone }: { onDone: () => void }) {
   const [provider, setProvider] = useState<Provider>("openai");
@@ -99,7 +104,7 @@ export function LlmStep({ onDone }: { onDone: () => void }) {
       )}
 
       {mode === "subscription" && provider === "openai" && <ChatGptLogin onDone={onDone} />}
-      {mode === "subscription" && provider === "anthropic" && <ClaudeSetupToken onDone={onDone} />}
+      {mode === "subscription" && provider === "anthropic" && <ClaudeLogin onDone={onDone} />}
       {mode === "api_key" && <ApiKeyForm key={provider} provider={provider} opt={opt} onDone={onDone} />}
 
       {mode === "subscription" && (
@@ -247,7 +252,96 @@ function ChatGptLogin({ onDone }: { onDone: () => void }) {
   );
 }
 
-function ClaudeSetupToken({ onDone }: { onDone: () => void }) {
+function ClaudeLogin({ onDone }: { onDone: () => void }) {
+  const [oauth, setOauth] = useState<OAuth>(null);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function start() {
+    setError(null);
+    setCode("");
+    setLoading(true);
+    try {
+      const r = await api<{ oauth: OAuth }>("/api/agent/llm/oauth", { body: { provider: "anthropic" } });
+      setOauth(r.oauth);
+      if (r.oauth?.status === "error") setError(r.oauth.error ?? "Falha ao iniciar o login.");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const r = await api<{ oauth: OAuth }>("/api/agent/llm/oauth", { body: { provider: "anthropic", code } });
+      setOauth(r.oauth);
+      if (r.oauth?.status === "done") onDone();
+      else setError(r.oauth?.error ?? "Não deu certo. Tente de novo.");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!oauth || oauth.status === "error" || oauth.status === "done") {
+    return (
+      <div className="space-y-4">
+        <p className="text-ink-soft">
+          Vamos abrir a página do Claude para você entrar com a sua conta Pro/Max e autorizar. No fim, ela mostra um
+          código — é só colar aqui.
+        </p>
+        <ErrorBox error={error} />
+        <button type="button" className="btn-primary" onClick={start} disabled={loading}>
+          {loading ? "Preparando…" : "Entrar com o Claude"}
+        </button>
+        <ManualClaudeToken onDone={onDone} />
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-5 rounded-3xl border border-line bg-cream p-6">
+      <ol className="space-y-4 text-[15px]">
+        <li>
+          <b>1.</b>{" "}
+          <a href={oauth.url} target="_blank" rel="noreferrer" className="btn-dark ml-1">
+            Abrir página do Claude ↗
+          </a>
+          <p className="mt-2 text-sm text-ink-soft">Entre com sua conta e clique em “Autorizar”.</p>
+        </li>
+        <li>
+          <b>2.</b> Copie o código que aparece depois de autorizar e cole aqui:
+          <input
+            className="input mt-2 font-mono"
+            placeholder="Cole o código de autorização"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            autoComplete="off"
+            required
+          />
+        </li>
+      </ol>
+      <ErrorBox error={error} />
+      <div className="flex flex-wrap items-center gap-3">
+        <button className="btn-primary" disabled={loading || !code}>
+          {loading ? "Conectando…" : "Conectar Claude"}
+        </button>
+        <button type="button" className="text-sm text-ink-soft underline hover:text-ink" onClick={start} disabled={loading}>
+          Gerar novo link
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Opção avançada: quem já tem um token de `claude setup-token`. */
+function ManualClaudeToken({ onDone }: { onDone: () => void }) {
   const [secret, setSecret] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -267,27 +361,14 @@ function ClaudeSetupToken({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="rounded-3xl border border-line bg-cream p-6 text-[15px]">
-        <p className="font-semibold">Gere um token da sua assinatura Claude (uma vez só):</p>
-        <ol className="mt-3 list-decimal space-y-2.5 pl-5 text-ink-soft">
-          <li>
-            No seu computador, instale o Claude Code:{" "}
-            <code className="kbd">npm install -g @anthropic-ai/claude-code</code>
-          </li>
-          <li>
-            No terminal, rode <code className="kbd">claude setup-token</code>
-          </li>
-          <li>Faça login com sua conta Claude Pro/Max no navegador que abrir.</li>
-          <li>
-            Copie o token que aparece (começa com <code className="kbd">sk-ant-oat</code>) e cole abaixo.
-          </li>
-        </ol>
-      </div>
-      <div>
-        <label className="label" htmlFor="token">Token da assinatura</label>
+    <details className="text-sm text-ink-soft">
+      <summary className="cursor-pointer">Já tenho um token do Claude Code</summary>
+      <form onSubmit={submit} className="mt-3 space-y-3">
+        <p>
+          Se você usa o Claude Code, rode <code className="kbd">claude setup-token</code> e cole o token (
+          <code className="kbd">sk-ant-oat…</code>).
+        </p>
         <input
-          id="token"
           className="input font-mono"
           type="password"
           placeholder="sk-ant-oat01-…"
@@ -296,11 +377,11 @@ function ClaudeSetupToken({ onDone }: { onDone: () => void }) {
           autoComplete="off"
           required
         />
-      </div>
-      <ErrorBox error={error} />
-      <button className="btn-primary" disabled={loading || !secret}>
-        {loading ? "Conectando…" : "Conectar Claude"}
-      </button>
-    </form>
+        <ErrorBox error={error} />
+        <button className="btn-ghost" disabled={loading || !secret}>
+          {loading ? "Conectando…" : "Usar este token"}
+        </button>
+      </form>
+    </details>
   );
 }

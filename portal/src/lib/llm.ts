@@ -11,7 +11,7 @@ export type ProviderInfo = {
   defaultModel: string;
   apiKey?: { placeholder: string; helpUrl: string };
   /** Como funciona o login por assinatura deste provedor. */
-  subscription?: { kind: "device_code" | "setup_token"; label: string };
+  subscription?: { kind: "device_code" | "claude_code"; label: string };
 };
 
 export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
@@ -20,7 +20,7 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
     label: "Claude (Anthropic)",
     defaultModel: "anthropic/claude-sonnet-5",
     apiKey: { placeholder: "sk-ant-api03-…", helpUrl: "https://console.anthropic.com/settings/keys" },
-    subscription: { kind: "setup_token", label: "Assinatura Claude Pro/Max" },
+    subscription: { kind: "claude_code", label: "Assinatura Claude Pro/Max" },
   },
   openai: {
     id: "openai",

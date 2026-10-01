@@ -1,18 +1,26 @@
-import { getOAuthSession, publicOAuth, startDeviceLogin } from "@/lib/agents";
+import { getOAuthSession, publicOAuth, startClaudeLogin, startDeviceLogin, submitClaudeCode } from "@/lib/agents";
 import { isProviderId, PROVIDERS } from "@/lib/llm";
 import { HttpError, readJson, requireReadyAgent, route } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-// Inicia login por assinatura (device-code): devolve URL + código para o usuário digitar.
+// Inicia login por assinatura:
+// - ChatGPT (device-code): devolve URL + código para o usuário digitar na OpenAI.
+// - Claude: devolve o link do claude.ai; depois o usuário manda o código com { code }.
 export const POST = route(async (ctx, req) => {
   const agent = requireReadyAgent(ctx);
-  const body = await readJson<{ provider?: string }>(req);
-  if (!isProviderId(body.provider) || PROVIDERS[body.provider].subscription?.kind !== "device_code") {
-    throw new HttpError(400, "Esse provedor não suporta login por código.");
+  const body = await readJson<{ provider?: string; code?: string }>(req);
+  if (!isProviderId(body.provider)) throw new HttpError(400, "Provedor inválido.");
+  const kind = PROVIDERS[body.provider].subscription?.kind;
+  if (kind === "device_code") return { oauth: publicOAuth(await startDeviceLogin(agent, body.provider)) };
+  if (kind === "claude_code") {
+    if (body.code) {
+      if (body.code.length > 500) throw new HttpError(400, "Código inválido.");
+      return { oauth: publicOAuth(await submitClaudeCode(agent, body.code)) };
+    }
+    return { oauth: publicOAuth(await startClaudeLogin(agent)) };
   }
-  const session = await startDeviceLogin(agent, body.provider);
-  return { oauth: publicOAuth(session) };
+  throw new HttpError(400, "Esse provedor não tem login por assinatura.");
 });
 
 export const GET = route(async (ctx) => {
