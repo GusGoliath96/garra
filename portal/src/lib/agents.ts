@@ -486,8 +486,30 @@ export async function setTelegram(a: AgentRow, botToken: string, botUsername: st
 
 export type PairingRequest = { code: string; label: string };
 
+// Cada `pairing list` sobe um processo Node dentro da cell (~200 MB, segundos de CPU).
+// Com a tela fazendo polling, as chamadas se acumulavam e travavam a cell: uma por vez por
+// agente, e o resultado vale por alguns segundos.
+const pairingCache = new Map<string, { at: number; value: PairingRequest[]; inflight?: Promise<PairingRequest[]> }>();
+
 export async function listPairing(a: AgentRow): Promise<PairingRequest[]> {
-  const r = await driver.openclaw(a.tenant, ["pairing", "list", "telegram", "--json"]);
+  const c = pairingCache.get(a.id);
+  if (c?.inflight) return c.value;
+  if (c && Date.now() - c.at < 8000) return c.value;
+  const entry = { at: c?.at ?? 0, value: c?.value ?? [], inflight: undefined as Promise<PairingRequest[]> | undefined };
+  entry.inflight = fetchPairing(a)
+    .then((value) => Object.assign(entry, { value, at: Date.now() }).value)
+    .catch(() => entry.value)
+    .finally(() => (entry.inflight = undefined));
+  pairingCache.set(a.id, entry);
+  return entry.inflight;
+}
+
+async function fetchPairing(a: AgentRow): Promise<PairingRequest[]> {
+  // Durante a partida (doctor/manutenção) um CLI concorrente derruba o gateway: só consulta
+  // com a cell saudável.
+  const healthy = await gateway(a).health().then((h) => h.ok).catch(() => false);
+  if (!healthy) throw new Error("cell iniciando");
+  const r = await driver.openclaw(a.tenant, ["pairing", "list", "telegram", "--json"], { timeoutMs: 60_000 });
   if (r.exitCode !== 0) return [];
   const text = r.output;
   const start = text.search(/[[{]/);
@@ -516,6 +538,7 @@ export async function approvePairing(a: AgentRow, code: string) {
   if (!/^[A-Za-z0-9-]{3,32}$/.test(code)) throw new Error("código inválido");
   const r = await driver.openclaw(a.tenant, ["pairing", "approve", "telegram", code, "--notify"]);
   if (r.exitCode !== 0) throw new Error(r.output.trim().split("\n").slice(-2).join(" "));
+  pairingCache.delete(a.id);
   if (a.setup_step === "telegram") await update(a.id, { setup_step: "done" });
   await logEvent(a.id, "telegram_paired");
 }

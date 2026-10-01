@@ -51,7 +51,7 @@ export class FleetDriver implements CellDriver {
       "--json",
       "--image", process.env.OPENCLAW_IMAGE ?? "ghcr.io/openclaw/openclaw:latest",
       "--memory", process.env.CELL_MEMORY ?? "1280m",
-      "--cpus", process.env.CELL_CPUS ?? "1",
+      "--cpus", process.env.CELL_CPUS ?? "2",
       "--env", `NODE_OPTIONS=--max-old-space-size=${heap}`,
     ]);
     // O CLI imprime um banner antes do JSON.

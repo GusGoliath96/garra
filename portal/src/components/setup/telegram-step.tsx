@@ -121,7 +121,7 @@ function Pairing({ agent, onDone, onChangeBot }: { agent: Agent; onDone: () => v
       if (alive && r) setRequests(r.requests);
     };
     void load();
-    const t = setInterval(load, 3000);
+    const t = setInterval(load, 6000);
     return () => {
       alive = false;
       clearInterval(t);
