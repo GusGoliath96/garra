@@ -15,7 +15,7 @@ fi
 
 echo "==> Pacotes base"
 sudo apt-get update -y
-sudo apt-get install -y ca-certificates curl gnupg git jq postgresql-client
+sudo apt-get install -y ca-certificates curl gnupg git jq postgresql-client qemu-guest-agent
 
 echo "==> Docker"
 if ! command -v docker >/dev/null; then
