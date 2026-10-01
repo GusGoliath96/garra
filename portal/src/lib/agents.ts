@@ -178,12 +178,25 @@ function errorMessage(e: unknown) {
 
 // ---------------------------------------------------------------- LLM
 
+/**
+ * Depois de gravar uma credencial pelo CLI, o gateway pode reiniciar o container; na partida ele
+ * roda `doctor --fix`, que trava o banco de estado ("offline maintenance") por ~1 min.
+ * Espera o gateway responder e o CLI conseguir ler o estado de novo.
+ */
+async function waitCellSettled(a: AgentRow, timeoutMs = 180_000) {
+  await new Promise((r) => setTimeout(r, 3000));
+  await waitFor(async () => {
+    if (!(await gateway(a).health()).ok) return false;
+    const r = await driver.openclaw(a.tenant, ["models", "auth", "list"], { timeoutMs: 30_000 });
+    return r.exitCode === 0 && !/maintenance/i.test(r.output);
+  }, timeoutMs);
+}
+
 async function applyModel(a: AgentRow, provider: ProviderId) {
   const model = PROVIDERS[provider].defaultModel;
-  const r = await driver.openclaw(a.tenant, ["models", "set", model]);
-  if (r.exitCode !== 0) throw new Error(`models set: ${r.output.slice(-300)}`);
-  // As credenciais foram gravadas pelo CLI; pede ao gateway para recarregar.
-  await gateway(a).call("gateway.restart.request", {}).catch(() => driver.restart(a.tenant));
+  await waitCellSettled(a);
+  // Pela API o gateway aplica com hot reload; `models set` pelo CLI força restart do container.
+  await gateway(a).configPatch({ agents: { defaults: { model: { primary: model } } } });
   return model;
 }
 
@@ -361,16 +374,19 @@ export async function submitClaudeCode(a: AgentRow, code: string): Promise<OAuth
     Object.assign(session, { status: "error", error: `O Claude não aceitou o código. ${msg}`.trim() });
     return session;
   }
-  try {
-    const r = await driver.openclaw(a.tenant, ["models", "auth", "paste-token", "--provider", "anthropic"], {
-      stdin: token + "\n",
-    });
-    if (r.exitCode !== 0) throw new Error(r.output.slice(-300));
-    await markSubscriptionDone(a.id, "anthropic");
-    session.status = "done";
-  } catch (e) {
-    Object.assign(session, { status: "error", error: errorMessage(e) });
-  }
+  // Gravar o token reinicia a cell (~1 min): conclui em segundo plano; a tela acompanha pelo GET.
+  void (async () => {
+    try {
+      const r = await driver.openclaw(a.tenant, ["models", "auth", "paste-token", "--provider", "anthropic"], {
+        stdin: token + "\n",
+      });
+      if (r.exitCode !== 0) throw new Error(r.output.slice(-300));
+      await markSubscriptionDone(a.id, "anthropic");
+      session.status = "done";
+    } catch (e) {
+      Object.assign(session, { status: "error", error: errorMessage(e) });
+    }
+  })();
   return session;
 }
 

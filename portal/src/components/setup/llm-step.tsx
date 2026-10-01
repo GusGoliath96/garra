@@ -160,7 +160,7 @@ function ApiKeyForm({ provider, opt, onDone }: { provider: Provider; opt: (typeo
       </div>
       <ErrorBox error={error} />
       <button className="btn-primary" disabled={loading || !secret}>
-        {loading ? "Testando a chave…" : "Conectar"}
+        {loading ? "Conectando… (pode levar até 1 minuto)" : "Conectar"}
       </button>
     </form>
   );
@@ -281,12 +281,34 @@ function ClaudeLogin({ onDone }: { onDone: () => void }) {
       const r = await api<{ oauth: OAuth }>("/api/agent/llm/oauth", { body: { provider: "anthropic", code } });
       setOauth(r.oauth);
       if (r.oauth?.status === "done") onDone();
-      else setError(r.oauth?.error ?? "Não deu certo. Tente de novo.");
+      else if (r.oauth?.status !== "finishing") setError(r.oauth?.error ?? "Não deu certo. Tente de novo.");
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
+  }
+
+  // Token aceito: a cell aplica a credencial (reinicia ~1 min). Acompanha até concluir.
+  useEffect(() => {
+    if (oauth?.status !== "finishing") return;
+    const t = setInterval(async () => {
+      const r = await api<{ oauth: OAuth }>("/api/agent/llm/oauth").catch(() => null);
+      if (!r?.oauth) return;
+      setOauth(r.oauth);
+      if (r.oauth.status === "done") onDone();
+      if (r.oauth.status === "error") setError(r.oauth.error ?? "Não deu certo. Tente de novo.");
+    }, 2500);
+    return () => clearInterval(t);
+  }, [oauth?.status, onDone]);
+
+  if (oauth?.status === "finishing") {
+    return (
+      <div className="flex items-center gap-3 rounded-3xl border border-line bg-cream p-6 text-ink-soft">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-coral border-t-transparent" />
+        Conta Claude conectada! Aplicando no seu agente… isso leva cerca de um minuto.
+      </div>
+    );
   }
 
   if (!oauth || oauth.status === "error" || oauth.status === "done") {
