@@ -362,8 +362,10 @@ export async function submitClaudeCode(a: AgentRow, code: string): Promise<OAuth
       enterRetries++;
       lastChange = Date.now();
     }
-    const out = proc.output().slice(before).replace(/\s+/g, "");
-    token = out.match(/sk-ant-oat01-[A-Za-z0-9_-]{20,}/)?.[0];
+    // Terminal de 1000 colunas: o token sai inteiro numa linha. Não remover espaços aqui —
+    // isso colava o texto seguinte ("Store this token…") no fim do token e o corrompia.
+    const out = proc.output().slice(before);
+    token = out.match(/sk-ant-oat01-[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])/)?.[0];
     if (token) break;
     if (/invalid|error|failed|expired/i.test(proc.output().slice(before))) break;
     await new Promise((r) => setTimeout(r, 400));

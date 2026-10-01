@@ -50,7 +50,7 @@ export class FleetDriver implements CellDriver {
       tenant,
       "--json",
       "--image", process.env.OPENCLAW_IMAGE ?? "ghcr.io/openclaw/openclaw:latest",
-      "--memory", process.env.CELL_MEMORY ?? "1280m",
+      "--memory", process.env.CELL_MEMORY ?? "2g",
       "--cpus", process.env.CELL_CPUS ?? "2",
       "--env", `NODE_OPTIONS=--max-old-space-size=${heap}`,
     ]);

@@ -45,7 +45,8 @@ Atualizado em 2026-09-30.
 - Proxmox: criar **VM** (não LXC — Docker em LXC dá dor de cabeça) Ubuntu 24.04,
   ~12 GB RAM, 4 vCPU, 80+ GB disco. Deixa ~4 GB pro host.
 - Telegram em long polling ⇒ cells **sempre ligadas** (sem scale-to-zero).
-- Teto por cell 1280 MB (heap 320 MB; uso real ~620 MB) ⇒ **~12–14 usuários** na VM de 12 GB (medido na Fase 0).
+- Teto por cell 2 GB / 2 CPUs (é teto, não reserva). Uso real com Telegram ativo: **~870 MB**, picos >1 GB
+  ⇒ **~10–11 usuários** na VM de 11 GB. Para escalar: reduzir plugins carregados por cell ou partir para mais hosts.
 
 ## Fases
 
@@ -73,6 +74,11 @@ Atualizado em 2026-09-30.
 - **Na VM (4 vCPU), 768 MB travou o provisionamento**: comandos via `docker exec` dividem o
   cgroup com o gateway (~580 MB + ~200 MB do CLI) e a cell entra em thrashing. Limite subiu
   para 1280 MB (é teto, não reserva: uso real ociosa ~620 MB).
+- **Com Telegram + Claude ativos, o gateway foi morto por OOM a 1,28 GB** (anon-rss ~1 GB; o limite de
+  heap não segura workers/memória nativa) → loop de restart e o OpenClaw desligou o canal
+  ("crash-loop breaker"). Teto subiu para 2 GB; uso estável medido ~870 MB.
+- Gravar credencial pelo CLI reinicia o container e o `doctor --fix` da partida trava o estado ~1 min;
+  CLIs concorrentes nessa janela fazem o gateway falhar. Portal agora espera e evita CLI concorrente.
 - `setup --baseline` cria o workspace sem onboarding; o portal remove o `BOOTSTRAP.md`.
 - Primeiro remetente aprovado no Telegram vira dono (`commands.ownerAllowFrom`).
 - Telegram suporta `webhookUrl` → caminho futuro para scale-to-zero.
