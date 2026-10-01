@@ -12,7 +12,11 @@ while (!url && Date.now() < until) {
 }
 console.log(url ? `URL ok (${url.length} chars): ${url.slice(0, 90)}…` : `SEM URL. Saída:\n${proc.output().slice(-800)}`);
 console.log("termina com state=:", /state=[A-Za-z0-9_-]+$/.test(url ?? ""));
-proc.write("codigo-invalido#xyz\r");
+// Código longo como o real (~100 chars): texto e Enter em escritas separadas.
+const fake = "A".repeat(60) + "#" + "b".repeat(43);
+proc.write(fake);
+await new Promise((r) => setTimeout(r, 800));
+proc.write("\r");
 await new Promise((r) => setTimeout(r, 8000));
 console.log("após código inválido:", proc.output().slice(-300).replace(/\s+/g, " "));
 proc.kill();

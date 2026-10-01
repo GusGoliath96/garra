@@ -327,11 +327,28 @@ export async function submitClaudeCode(a: AgentRow, code: string): Promise<OAuth
   const proc = session.proc;
   session.status = "finishing";
   const before = proc.output().length;
-  proc.write(code.trim() + "\r");
+  // O Claude Code trata texto longo como "colagem": o Enter precisa ir separado,
+  // senão vira parte do texto colado e nada acontece.
+  proc.write(code.trim());
+  await new Promise((r) => setTimeout(r, 800));
+  proc.write("\r");
 
-  const until = Date.now() + 45_000;
+  const until = Date.now() + 60_000;
   let token: string | undefined;
+  let lastLen = proc.output().length;
+  let lastChange = Date.now();
+  let enterRetries = 0;
   while (Date.now() < until) {
+    const len = proc.output().length;
+    if (len !== lastLen) {
+      lastLen = len;
+      lastChange = Date.now();
+    } else if (Date.now() - lastChange > 4000 && enterRetries < 2) {
+      // Nada mudou: reenvia o Enter.
+      proc.write("\r");
+      enterRetries++;
+      lastChange = Date.now();
+    }
     const out = proc.output().slice(before).replace(/\s+/g, "");
     token = out.match(/sk-ant-oat01-[A-Za-z0-9_-]{20,}/)?.[0];
     if (token) break;
