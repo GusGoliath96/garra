@@ -64,5 +64,28 @@ await pool.query(`
   CREATE INDEX IF NOT EXISTS agent_event_agent_idx ON agent_event(agent_id, created_at DESC);
 `);
 
+// Integrações (Google Agenda, Gmail…): credenciais ficam aqui, cifradas — nunca na cell.
+// A cell acessa via servidor MCP do portal, autenticada por um token próprio do agente.
+await pool.query(`
+  ALTER TABLE agent ADD COLUMN IF NOT EXISTS mcp_token_hash text;
+  CREATE UNIQUE INDEX IF NOT EXISTS agent_mcp_token_idx ON agent(mcp_token_hash);
+
+  CREATE TABLE IF NOT EXISTS integration (
+    id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_id           uuid NOT NULL REFERENCES agent(id) ON DELETE CASCADE,
+    provider           text NOT NULL CHECK (provider IN ('google')),
+    account_email      text,
+    scopes             text NOT NULL DEFAULT '',
+    refresh_token_enc  text NOT NULL,
+    access_token_enc   text,
+    access_expires_at  timestamptz,
+    status             text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'error')),
+    status_detail      text,
+    created_at         timestamptz NOT NULL DEFAULT now(),
+    updated_at         timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (agent_id, provider)
+  );
+`);
+
 console.log("migrações aplicadas");
 await pool.end();

@@ -58,3 +58,12 @@ ssh usuario@IP-DA-VM 'cd ~/garra && bash deploy/update.sh'
    lista pedidos (`pairing list --json`) e aprova o dono (`pairing approve --notify`).
 
 Credenciais de LLM e token do bot ficam **só na cell**; o portal guarda apenas o token do gateway.
+
+## Integrações (Google Agenda)
+
+O OAuth do Google acontece no portal; os tokens ficam cifrados no Postgres (`integration`).
+A cell recebe as ferramentas por um servidor MCP do portal (`/api/mcp`, Streamable HTTP),
+autenticada com um token por agente (só o hash fica no banco). Ferramentas:
+`agenda_listar_eventos`, `agenda_criar_evento`, `agenda_atualizar_evento`,
+`agenda_cancelar_evento`, `agenda_horarios_livres`. Configuração do Google Cloud:
+[deploy/GOOGLE.md](deploy/GOOGLE.md).

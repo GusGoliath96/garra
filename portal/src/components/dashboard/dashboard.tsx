@@ -6,6 +6,7 @@ import { api, useAgent, type Agent, type Health } from "../setup/api";
 import { LlmStep } from "../setup/llm-step";
 import { PersonaStep } from "../setup/persona-step";
 import { TelegramStep } from "../setup/telegram-step";
+import { GoogleCalendarCard } from "./google-calendar";
 
 const PROVIDER_LABEL: Record<string, string> = { openai: "ChatGPT (OpenAI)", anthropic: "Claude (Anthropic)", openrouter: "OpenRouter" };
 
@@ -120,7 +121,7 @@ export function Dashboard({ initial, userName }: { initial: Agent; userName: str
       <section className="card">
         <h2 className="font-display text-xl font-bold">Integrações</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Integration icon="📅" name="Google Agenda" text="Consultar, marcar e remarcar compromissos por mensagem." />
+          <GoogleCalendarCard />
           <Integration icon="✉️" name="Gmail" text="Resumo da caixa de entrada, urgências e rascunhos de resposta." />
           <Integration icon="📆" name="Outlook / Microsoft 365" text="Agenda e e-mail corporativos." />
           <Integration icon="🎙️" name="Notas de voz" text="Áudios do Telegram viram tarefas, lembretes e e-mails." />

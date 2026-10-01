@@ -78,7 +78,7 @@ export async function getAgentForOrg(orgId: string): Promise<AgentRow | null> {
   return queryOne<AgentRow>(`SELECT * FROM agent WHERE organization_id = $1 AND status <> 'deleting' LIMIT 1`, [orgId]);
 }
 
-async function update(id: string, fields: Partial<AgentRow>) {
+export async function update(id: string, fields: Partial<AgentRow>) {
   const keys = Object.keys(fields);
   if (!keys.length) return;
   const sets = keys.map((k, i) => `${k} = $${i + 2}`).join(", ");
@@ -93,7 +93,7 @@ export async function logEvent(agentId: string, type: string, data: Record<strin
   await query(`INSERT INTO agent_event (agent_id, type, data) VALUES ($1, $2, $3)`, [agentId, type, JSON.stringify(data)]);
 }
 
-function gateway(a: AgentRow): GatewayClient {
+export function gateway(a: AgentRow): GatewayClient {
   if (!a.port || !a.gateway_token_enc) throw new Error("agente ainda não provisionado");
   return new GatewayClient(driver.gatewayUrl(a.port), decrypt(a.gateway_token_enc));
 }
