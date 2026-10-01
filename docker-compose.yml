@@ -1,0 +1,20 @@
+# Infra local do portal (dev). Em produção o Postgres roda na VM com backup.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: clawhost_pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clawhost
+      POSTGRES_PASSWORD: clawhost_dev
+      POSTGRES_DB: clawhost
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - clawhost_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clawhost"]
+      interval: 5s
+      retries: 10
+volumes:
+  clawhost_pg:

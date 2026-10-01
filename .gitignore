@@ -1,0 +1,6 @@
+node_modules/
+poc/.state/
+portal/.next/
+portal/.env*
+!portal/.env.example
+.claude/

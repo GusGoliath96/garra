@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #fbf7f2;
+  --paper: #ffffff;
+  --ink: #1b1512;
+  --ink-soft: #5c4f47;
+  --line: #eadfd4;
+  --coral: #ff5a36;
+  --coral-deep: #e2401d;
+  --coral-soft: #ffe4dc;
+  --night: #1a1310;
+  --mint: #1f9d6b;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-coral: var(--coral);
+  --color-coral-deep: var(--coral-deep);
+  --color-coral-soft: var(--coral-soft);
+  --color-night: var(--night);
+  --color-mint: var(--mint);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-coral text-white shadow-[0_6px_20px_-6px_rgba(255,90,54,0.6)] hover:bg-coral-deep;
+}
+@utility btn-dark {
+  @apply btn bg-ink text-cream hover:bg-black;
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-paper text-ink hover:border-ink;
+}
+@utility card {
+  @apply rounded-3xl border border-line bg-paper p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)];
+}
+@utility input {
+  @apply w-full rounded-xl border border-line bg-paper px-4 py-3 text-[15px] outline-none transition placeholder:text-ink-soft/50 focus:border-coral focus:ring-4 focus:ring-coral/15;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-ink;
+}
+@utility kbd {
+  @apply rounded-md border border-line bg-cream px-1.5 py-0.5 font-mono text-[0.85em];
+}

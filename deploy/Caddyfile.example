@@ -1,0 +1,6 @@
+# Quando tiver domínio: TLS automático e o portal atrás do Caddy.
+# As cells continuam só em 127.0.0.1 — nunca exponha as portas 191xx.
+garra.seudominio.com.br {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+}

@@ -1,0 +1,16 @@
+[Unit]
+Description=Garra portal (Next.js) + provisionador de cells OpenClaw
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__DIR__
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm start -- -p 3000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
