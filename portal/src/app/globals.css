@@ -1,16 +1,49 @@
 @import "tailwindcss";
 
+/* Tema claro (padrão). Todas as cores da interface vêm destes tokens. */
 :root {
-  --cream: #fbf7f2;
+  color-scheme: light;
+  --cream: #fbf8f4;
   --paper: #ffffff;
-  --ink: #1b1512;
-  --ink-soft: #5c4f47;
-  --line: #eadfd4;
-  --coral: #ff5a36;
-  --coral-deep: #e2401d;
-  --coral-soft: #ffe4dc;
-  --night: #1a1310;
-  --mint: #1f9d6b;
+  --ink: #17130f;
+  --ink-soft: #5f554d;
+  --line: #e9e1d8;
+  --coral: #f2552c;
+  --coral-deep: #d63f17;
+  --coral-soft: #ffe7de;
+  --on-coral: #ffffff;
+  --night: #15110e;
+  --on-night: #f6efe8;
+  --mint: #16865a;
+  --mint-soft: #e2f5ec;
+  --chat-bg: #ece4db;
+  --bubble-in: #ffffff;
+  --bubble-out: #d9f5c8;
+  --shadow: 0 1px 2px rgba(23, 19, 15, 0.04), 0 8px 24px -12px rgba(23, 19, 15, 0.12);
+}
+
+/* Tema escuro automático, conforme o sistema. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --cream: #121010;
+    --paper: #1b1817;
+    --ink: #f3ede7;
+    --ink-soft: #b3a79d;
+    --line: #2e2926;
+    --coral: #ff6a42;
+    --coral-deep: #ff8a68;
+    --coral-soft: #3a211a;
+    --on-coral: #1a0f0b;
+    --night: #0b0908;
+    --on-night: #f3ede7;
+    --mint: #43d095;
+    --mint-soft: #15301f;
+    --chat-bg: #0f1418;
+    --bubble-in: #232a30;
+    --bubble-out: #1f4d35;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  }
 }
 
 @theme inline {
@@ -22,8 +55,14 @@
   --color-coral: var(--coral);
   --color-coral-deep: var(--coral-deep);
   --color-coral-soft: var(--coral-soft);
+  --color-on-coral: var(--on-coral);
   --color-night: var(--night);
+  --color-on-night: var(--on-night);
   --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-chat-bg: var(--chat-bg);
+  --color-bubble-in: var(--bubble-in);
+  --color-bubble-out: var(--bubble-out);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
@@ -39,19 +78,19 @@ body {
   @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-coral text-white shadow-[0_6px_20px_-6px_rgba(255,90,54,0.6)] hover:bg-coral-deep;
+  @apply btn bg-coral text-on-coral shadow-[0_6px_20px_-8px_var(--coral)] hover:bg-coral-deep;
 }
 @utility btn-dark {
-  @apply btn bg-ink text-cream hover:bg-black;
+  @apply btn bg-ink text-cream hover:opacity-85;
 }
 @utility btn-ghost {
   @apply btn border border-line bg-paper text-ink hover:border-ink;
 }
 @utility card {
-  @apply rounded-3xl border border-line bg-paper p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)];
+  @apply rounded-3xl border border-line bg-paper p-6 shadow-[var(--shadow)];
 }
 @utility input {
-  @apply w-full rounded-xl border border-line bg-paper px-4 py-3 text-[15px] outline-none transition placeholder:text-ink-soft/50 focus:border-coral focus:ring-4 focus:ring-coral/15;
+  @apply w-full rounded-xl border border-line bg-paper px-4 py-3 text-[15px] text-ink outline-none transition placeholder:text-ink-soft/60 focus:border-coral focus:ring-4 focus:ring-coral/15;
 }
 @utility label {
   @apply mb-1.5 block text-sm font-medium text-ink;

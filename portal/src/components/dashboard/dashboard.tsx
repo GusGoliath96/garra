@@ -11,6 +11,15 @@ const PROVIDER_LABEL: Record<string, string> = { openai: "ChatGPT (OpenAI)", ant
 
 type Panel = "llm" | "persona" | "telegram" | null;
 
+const EXAMPLES = [
+  "Todo dia às 7h30 me manda um resumo do que tenho pendente.",
+  "Me lembra de cobrar a proposta do João quinta às 17h.",
+  "Anota: reunião com a Alfa ficou de mandar o contrato até dia 10.",
+  "Quais são minhas pendências desta semana, por prioridade?",
+  "Resume esse link em 5 tópicos: https://…",
+  "Rascunha uma mensagem educada recusando o convite de sexta.",
+];
+
 export function Dashboard({ initial, userName }: { initial: Agent; userName: string }) {
   const router = useRouter();
   const { agent, health, refresh } = useAgent(initial);
@@ -97,10 +106,24 @@ export function Dashboard({ initial, userName }: { initial: Agent; userName: str
       )}
 
       <section className="card">
+        <h2 className="font-display text-xl font-bold">Experimente pedir</h2>
+        <p className="mt-1 text-sm text-ink-soft">Mande no Telegram, do jeito que você falaria com uma secretária.</p>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {EXAMPLES.map((e) => (
+            <li key={e} className="rounded-2xl border border-line bg-cream px-4 py-3 text-[15px]">
+              “{e}”
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="card">
         <h2 className="font-display text-xl font-bold">Integrações</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Integration icon="📅" name="Google Agenda" text="Consultar e marcar compromissos por mensagem." />
-          <Integration icon="✉️" name="Gmail" text="Resumir e responder e-mails importantes." />
+          <Integration icon="📅" name="Google Agenda" text="Consultar, marcar e remarcar compromissos por mensagem." />
+          <Integration icon="✉️" name="Gmail" text="Resumo da caixa de entrada, urgências e rascunhos de resposta." />
+          <Integration icon="📆" name="Outlook / Microsoft 365" text="Agenda e e-mail corporativos." />
+          <Integration icon="🎙️" name="Notas de voz" text="Áudios do Telegram viram tarefas, lembretes e e-mails." />
         </div>
       </section>
 
@@ -109,7 +132,7 @@ export function Dashboard({ initial, userName }: { initial: Agent; userName: str
           <h2 className="font-display text-xl font-bold">Manutenção</h2>
           <p className="text-sm text-ink-soft">Se ela parar de responder, reiniciar costuma resolver.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button className="btn-ghost" onClick={restart} disabled={busy !== null}>
             {busy === "restart" ? "Reiniciando…" : "Reiniciar"}
           </button>
@@ -132,7 +155,7 @@ function StatusPill({ health, status }: { health: Health; status: Agent["status"
   return (
     <span
       className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-        online ? "bg-mint/10 text-mint" : checking ? "bg-line text-ink-soft" : "bg-coral-soft text-coral-deep"
+        online ? "bg-mint-soft text-mint" : checking ? "bg-line text-ink-soft" : "bg-coral-soft text-coral-deep"
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-mint" : checking ? "bg-ink-soft" : "bg-coral"}`} />

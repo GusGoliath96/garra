@@ -42,10 +42,10 @@ export function AuthForm({ mode }: { mode: "signup" | "signin" }) {
     <form onSubmit={submit} className="card w-full max-w-md space-y-5 p-8">
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight">
-          {signup ? "Crie sua conta" : "Bem-vinda de volta"}
+          {signup ? "Crie sua conta" : "Que bom te ver de novo"}
         </h1>
         <p className="mt-1.5 text-ink-soft">
-          {signup ? "Em poucos minutos sua assistente estará no ar." : "Entre para gerenciar sua assistente."}
+          {signup ? "Em 5 minutos sua assistente executiva estará trabalhando." : "Entre para gerenciar sua assistente."}
         </p>
       </div>
       {signup && (

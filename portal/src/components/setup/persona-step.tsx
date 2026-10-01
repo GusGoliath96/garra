@@ -38,7 +38,7 @@ export function PersonaStep({
   const [name, setName] = useState(agent.name ?? "Lia");
   const [emoji, setEmoji] = useState(agent.emoji ?? "🦞");
   const [owner, setOwner] = useState(p.ownerName ?? ownerName);
-  const [tone, setTone] = useState(p.tone ?? "amigavel");
+  const [tone, setTone] = useState(p.tone ?? "profissional");
   const [timezone, setTimezone] = useState(p.timezone ?? browserTz);
   const [instructions, setInstructions] = useState(p.instructions ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -130,12 +130,12 @@ export function PersonaStep({
 
       <div>
         <label className="label" htmlFor="instr">
-          O que ela precisa saber? <span className="font-normal text-ink-soft">(opcional)</span>
+          Sobre você e seu trabalho <span className="font-normal text-ink-soft">(opcional)</span>
         </label>
         <textarea
           id="instr"
           className="input min-h-28"
-          placeholder="Ex.: Sou designer freelancer, tenho dois gatos (Mingau e Pipoca). Prefiro respostas curtas e lembretes sempre de manhã."
+          placeholder="Ex.: Sou sócio de uma construtora em Campinas. Reuniões só à tarde, sextas sem compromissos. Clientes principais: Alfa e Beta. Prefiro respostas curtas e lembretes 1h antes."
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
           maxLength={4000}

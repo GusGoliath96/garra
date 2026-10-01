@@ -41,7 +41,7 @@ export function SetupWizard({ initial, userName }: { initial: Agent | null; user
           <li key={s.id} className="flex flex-1 items-center gap-2">
             <span
               className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
-                i < idx ? "bg-mint text-white" : i === idx ? "bg-coral text-white" : "bg-line text-ink-soft"
+                i < idx ? "bg-mint text-paper" : i === idx ? "bg-coral text-on-coral" : "bg-line text-ink-soft"
               }`}
             >
               {i < idx ? "✓" : i + 1}
@@ -88,9 +88,9 @@ export function SetupWizard({ initial, userName }: { initial: Agent | null; user
 }
 
 const TIPS = [
-  "Estamos criando um servidor isolado só pra você.",
-  "Cada assistente tem sua própria memória e credenciais.",
-  "Enquanto isso: já tem conta no ChatGPT ou no Claude? Vamos precisar dela no próximo passo.",
+  "Estamos criando um servidor dedicado só para você.",
+  "Sua assistente terá memória e credenciais isoladas de qualquer outro cliente.",
+  "Enquanto isso: tenha à mão sua conta do ChatGPT ou do Claude — vamos usar no próximo passo.",
 ];
 
 function Provisioning({ detail }: { detail?: string | null }) {

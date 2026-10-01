@@ -7,9 +7,9 @@ const body = Geist({ variable: "--font-body", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Garra — sua assistente de IA no Telegram",
+  title: "Garra — assistente executiva com IA",
   description:
-    "Crie em minutos uma assistente pessoal de IA que conversa com você no Telegram, lembra das suas coisas e cuida da sua agenda.",
+    "Assistente pessoal com IA para quem tem agenda cheia: agenda, e-mails, lembretes e briefing diário, tudo pelo Telegram.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
