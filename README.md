@@ -34,12 +34,17 @@ a partir do `.env.example` (gere `BETTER_AUTH_SECRET` e `APP_SECRET_KEY` com
 
 ## Subir na VM (Proxmox)
 
-VM Ubuntu 24.04, ~12 GB RAM, 4 vCPU, 80 GB. Copie o projeto (sem `node_modules`) e rode
-o setup como o usuário UID 1000:
+VM Ubuntu 24.04, ~12 GB RAM, 4 vCPU, 80 GB. Clone e rode o setup como o
+usuário UID 1000:
 
 ```bash
-rsync -a --exclude node_modules --exclude .next --exclude poc/.state --exclude '.env*' ./ usuario@IP-DA-VM:~/garra/
-ssh usuario@IP-DA-VM 'cd ~/garra && bash deploy/setup-vm.sh'
+ssh usuario@IP-DA-VM 'git clone https://github.com/GusGoliath96/garra.git ~/garra && cd ~/garra && bash deploy/setup-vm.sh'
+```
+
+Atualizações seguintes (a VM é um clone deste repositório):
+
+```bash
+ssh usuario@IP-DA-VM 'cd ~/garra && bash deploy/update.sh'
 ```
 
 ## Como funciona
