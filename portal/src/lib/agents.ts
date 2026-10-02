@@ -145,7 +145,15 @@ async function provision(agent: AgentRow) {
     const gw = gateway(fresh);
     await waitFor(async () => (await gw.health()).ok, 60_000);
     await gw.configPatch({
-      agents: { defaults: { userTimezone: "America/Sao_Paulo" } },
+      agents: {
+        defaults: {
+          userTimezone: "America/Sao_Paulo",
+          // Sem heartbeat recorrente: ele gasta uma chamada da IA do cliente por hora e, com
+          // Claude, vazava respostas "nada pendente" no Telegram. Lembretes e briefing usam
+          // automações (cron), que continuam funcionando.
+          heartbeat: { every: "0m" },
+        },
+      },
     });
     await update(agent.id, { status: "ready", status_detail: null });
     await logEvent(agent.id, "provisioned", { port });
